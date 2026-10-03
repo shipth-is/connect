@@ -67,8 +67,8 @@ export class ApiError extends Error {
 }
 
 let apiUrl = ''
-// The short-lived JWT from the handoff. In memory only - never in storage.
-let jwt: string | null = null
+// The short-lived access token from the handoff. In memory only - never in storage.
+let accessToken: string | null = null
 
 export function setApiUrl(url: string) {
   apiUrl = url
@@ -78,8 +78,8 @@ async function call<T>(method: 'POST' | 'DELETE', path: string, body?: object, a
   const headers: Record<string, string> = {}
   if (body) headers['Content-Type'] = 'application/json'
   if (auth) {
-    if (!jwt) throw new ApiError('link_expired')
-    headers.Authorization = `bearer ${jwt}`
+    if (!accessToken) throw new ApiError('link_expired')
+    headers.Authorization = `bearer ${accessToken}`
   }
 
   let res: Response
@@ -103,18 +103,18 @@ async function call<T>(method: 'POST' | 'DELETE', path: string, body?: object, a
 
   const data = await res.json().catch(() => null)
   if (data && typeof data.error === 'string') throw new ApiError(data.error, res.status)
-  // A 401 with no {error} is the JWT - the link has expired
+  // A 401 with no {error} is the access token - the link has expired
   if (res.status === 401) throw new ApiError('link_expired', 401)
   // A 400 with a list of zod issues - our request was wrong
   if (res.status === 400) throw new ApiError('invalid', 400)
   throw new ApiError('apple_error', res.status)
 }
 
-// Swap the single-use token from the page URL for a short-lived JWT
+// Swap the single-use token from the page URL for a short-lived access token
 export async function handoff(token: string): Promise<void> {
   try {
-    const data = await call<{jwt: string}>('POST', '/auth/apple-handoff', {token}, false)
-    jwt = data.jwt
+    const data = await call<{accessToken: string}>('POST', '/auth/apple-handoff', {token}, false)
+    accessToken = data.accessToken
   } catch (e) {
     // Whatever went wrong, the link can't be used
     if (e instanceof ApiError && e.code === 'network') throw e

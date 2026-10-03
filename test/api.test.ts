@@ -10,7 +10,7 @@ const json = (status: number, body: unknown) =>
 let fetchMock: ReturnType<typeof vi.fn>
 let api: Api
 
-// A fresh module each time - the JWT lives in module state
+// A fresh module each time - the access token lives in module state
 beforeEach(async () => {
   vi.resetModules()
   fetchMock = vi.fn()
@@ -24,14 +24,14 @@ afterEach(() => {
 })
 
 const signedIn = async () => {
-  fetchMock.mockResolvedValueOnce(json(200, {jwt: 'scoped-jwt'}))
+  fetchMock.mockResolvedValueOnce(json(200, {accessToken: 'st-connect:abc', expiresAt: '2026-10-03T12:15:00Z'}))
   await api.handoff('t0k3n')
   fetchMock.mockClear()
 }
 
 describe('handoff', () => {
-  test('swaps the token for a JWT, then sends it on the next call', async () => {
-    fetchMock.mockResolvedValueOnce(json(200, {jwt: 'scoped-jwt'}))
+  test('swaps the token for an access token, then sends it on the next call', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, {accessToken: 'st-connect:abc', expiresAt: '2026-10-03T12:15:00Z'}))
     await api.handoff('t0k3n')
 
     const [url, init] = fetchMock.mock.calls[0]
@@ -41,7 +41,7 @@ describe('handoff', () => {
 
     fetchMock.mockResolvedValueOnce(new Response(null, {status: 204}))
     await api.deleteSession()
-    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('bearer scoped-jwt')
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('bearer st-connect:abc')
   })
 
   test('any failure means the link expired', async () => {

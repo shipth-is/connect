@@ -38,7 +38,7 @@ const calls = () => fetchMock.mock.calls.map(([url, init]) => `${init.method} ${
 const bodyOf = (path: string) => JSON.parse(fetchMock.mock.calls.find(([url]) => url.endsWith(path))![1].body)
 
 async function open(token: string | null = 'abc') {
-  // A fresh api module each time - the JWT lives in module state
+  // A fresh api module each time - the access token lives in module state
   vi.resetModules()
   const api = await import('../src/api')
   api.setApiUrl(API)
@@ -57,7 +57,7 @@ async function signIn(password = 'secret') {
 
 beforeEach(() => {
   routes = {
-    'POST /auth/apple-handoff': () => json(200, {jwt: 'scoped'}),
+    'POST /auth/apple-handoff': () => json(200, {accessToken: 'st-connect:abc', expiresAt: '2026-10-03T12:15:00Z'}),
     'POST /me/apple/signin/init': () => json(200, {salt: 'c2E=', iterations: 1000, b: 'Qg==', protocol: 's2k'}),
     'POST /me/apple/signin/complete': () => json(200, session),
     'POST /me/apple/2fa/phone': () => noContent(),
@@ -138,7 +138,7 @@ describe('sign in', () => {
     expect(calls()).toContain('DELETE /me/apple/session')
   })
 
-  test('the JWT expires - link expired', async () => {
+  test('the access token expires - link expired', async () => {
     routes['POST /me/apple/signin/init'] = () => new Response('Unauthorized', {status: 401})
     await signIn()
     await screen.findByRole('heading', {name: 'This link has expired'})

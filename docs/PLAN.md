@@ -51,15 +51,42 @@ The page selects its URLs from `window.location.hostname`:
 
 For any other host, show the error "This page is not configured for this address." and do nothing else.
 
-All API calls send `Authorization: bearer <jwt>` and `Content-Type: application/json`.
+All API calls, except the handoff, send `Authorization: bearer <access token>` and `Content-Type: application/json`.
 
 ### 3.2 API endpoints
 
-The relay endpoints exist on develop now. The handoff endpoint is new. The backend builds it to this contract.
+The relay endpoints exist on develop now. The two handoff endpoints are new. The backend builds them to this contract.
+
+#### Handoff and tokens
+
+The page has its own origin, so it cannot read the user's ShipThis login. Two short-lived tokens connect the page to the user.
+Neither token is a JWT.
+
+| | Handoff token | Access token |
+|---|---|---|
+| Made by | `POST /me/apple/handoff`. The main app calls it with the user's normal ShipThis login. | `POST /auth/apple-handoff`. The page calls it with the handoff token. |
+| Format | 32 random bytes, base64url | `st-connect:<32 random bytes, base64url>` |
+| Stored | A hash in Redis, with the user ID | A hash in Redis, with the user ID |
+| Lifetime | Single use. Expires after 2 minutes. | Expires after 15 minutes |
+| Where | The page URL fragment | `Authorization` header from the page |
+| Accepted by | `POST /auth/apple-handoff` only | `/me/apple/*` only |
+
+- The general `security` middleware does not accept an access token. It tries to read it as a JWT and returns `401`.
+  Only a separate middleware on `/me/apple/*` accepts it. So a route that forgets to check gives `401`, not access.
+- "Sign out everywhere" (`revokeUserJWTs`) also deletes the user's handoff and access tokens.
+- The Apple session is stored with the user ID. The main app reads it later with its normal ShipThis login.
+
+`POST /me/apple/handoff` is for the main app. The page does not call it:
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `POST /auth/apple-handoff` (new, no JWT) | `{token}` | `200 {jwt}`. The JWT works only on `/me/apple/*` and expires after 15 minutes. `401` if the token is wrong, used or expired. |
+| `POST /me/apple/handoff` (normal ShipThis login) | none | `200 {token}` |
+
+#### Endpoints that the page calls
+
+| Endpoint | Body | Response |
+|---|---|---|
+| `POST /auth/apple-handoff` (no `Authorization`) | `{token}` | `200 {accessToken, expiresAt}`. `401` if the token is wrong, used or expired. |
 | `POST /me/apple/signin/init` | `{accountName, a, protocols: ['s2k','s2k_fo']}` | `200 {salt, iterations, b, protocol}` |
 | `POST /me/apple/signin/complete` | `{m1, m2}` | `200` session response or two-factor response |
 | `POST /me/apple/2fa/phone` | `{phoneId}` | `204`. Apple sends an SMS. |
@@ -90,7 +117,7 @@ Errors:
 
 - A relay error is `{error: <code>}` with an HTTP status.
 - A body that fails validation gives `400` with an array of zod issues. Show "Something went wrong. Try again."
-- A `401` with no `{error}` body means that the scoped JWT expired. Show the "link expired" error (section 4.5).
+- A `401` with no `{error}` body means that the access token expired. Show the "link expired" error (section 4.5).
 - If the request does not get to the API, show "Could not reach ShipThis. Check your connection and try again."
 
 | Code | Message |
@@ -143,7 +170,7 @@ One HTML page with one React component, `App`. The component holds the current s
 1. Read the environment (section 3.1).
 2. Read `token` and `return` from the fragment, then remove the fragment.
 3. If there is no token, show the "link expired" error.
-4. Call `POST /auth/apple-handoff`. Keep the JWT in a module variable only.
+4. Call `POST /auth/apple-handoff`. Keep the access token in a module variable only.
 5. If the call fails, show the "link expired" error.
 6. Show the sign-in form.
 
@@ -291,7 +318,7 @@ LICENSE
 
 ## 9. Not in this repo
 
-- The handoff endpoint and the scoped JWT (backend).
+- The two handoff endpoints, the tokens and the `/me/apple/*` middleware (backend).
 - The "Connect Apple account" button and the return handling (frontend).
 - The App Platform config and the DNS record.
 - Team selection and the setup job. The main app does these after the return.
