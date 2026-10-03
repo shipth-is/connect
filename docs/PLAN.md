@@ -17,7 +17,7 @@ A public workflow builds it, and each user can check that the page they see is t
 
 ## 1. Requirements
 
-- The page runs no third-party code. It has one runtime dependency: `@foxt/js-srp`.
+- The page loads no third-party scripts. Its runtime dependencies are `@foxt/js-srp`, `react` and `react-dom`, pinned and bundled into the build.
 - The page loads nothing from other origins. It calls only the ShipThis API.
 - The page never logs, stores or sends the password, the SRP values (`a`, `m1`, `m2`) or the 2FA code,
   except in the API calls in section 3.2. Use no `console.*` calls on these values. Use no `localStorage`, `sessionStorage` or cookies.
@@ -29,10 +29,10 @@ A public workflow builds it, and each user can check that the page they see is t
 
 | Item | Choice |
 |---|---|
-| Language | TypeScript, no framework. Plain DOM code. |
+| Language | TypeScript and React. Most developers can read React, and the flow stays in one component (`src/App.tsx`). |
 | Build | Vite. Set `build.modulePreload.polyfill: false`. Make sure that the output has no inline scripts and no inline styles. |
-| Runtime dependency | `@foxt/js-srp` `0.0.3-patch2` (ISC). Use its browser build. Make sure that the bundle has no `Buffer` or `crypto` polyfill. |
-| Tests | Vitest |
+| Runtime dependencies | `@foxt/js-srp` `0.0.3-patch2` (ISC). Use its browser build. Make sure that the bundle has no `Buffer` or `crypto` polyfill. `react` and `react-dom` (MIT). |
+| Tests | Vitest, React Testing Library and jsdom |
 | Server | Caddy, in a Docker image |
 | Package manager | npm. Pin exact versions. Commit `package-lock.json`. Use `npm ci`. |
 | License | MIT, "Hello Invent LTD" |
@@ -136,7 +136,7 @@ ShipThis runs the image as a DigitalOcean App Platform service and deploys it by
 
 ## 4. Page behavior
 
-One HTML page. Each step replaces the content of one `<main>` element.
+One HTML page with one React component, `App`. The component holds the current step and shows it.
 
 ### 4.1 Start
 
@@ -249,17 +249,22 @@ Write `scripts/verify.sh` (bash, needs `docker` and `curl`).
 
 ```
 src/
-  main.ts          start, routing between steps
+  main.tsx         reads the config and the link, then shows App
+  App.tsx          the steps: sign in, two-factor, cancel, errors
+  link.ts          reads the page URL and removes the fragment
   srp.ts           Apple SRP. The only file that reads the password. ShipThis has this code in its private app now. Move it here.
   api.ts           the calls in section 3.2, and the error-code messages
   config.ts        the environment table in section 3.1
   returnPath.ts    the return-path check in section 3.3
-  views/           signin.ts, twoFactor.ts, error.ts
   style.css
   logo-light.svg, logo-dark.svg
 test/
   srp.test.ts
+  config.test.ts
   returnPath.test.ts
+  api.test.ts
+  link.test.ts
+  App.test.tsx
 index.html
 Dockerfile
 Caddyfile
