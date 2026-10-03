@@ -201,7 +201,7 @@ Support dark mode with `prefers-color-scheme`. Use no web fonts and no Apple log
 
 ### 6.1 Dockerfile
 
-1. Stage 1: `node:22-alpine`, pinned by digest. `npm ci`, then `vite build` with `COMMIT` from a build argument.
+1. Stage 1: `node:24-alpine`, pinned by digest. `npm ci`, then `vite build` with `COMMIT` from a build argument.
 2. Stage 2: `caddy:2-alpine`, pinned by digest. Copy `dist/` and `Caddyfile`. Expose `8080`.
 
 ### 6.2 Caddyfile
