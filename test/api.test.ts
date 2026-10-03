@@ -131,6 +131,36 @@ describe('errors', () => {
     expect(e.message).toBe('Something went wrong. Try again.')
   })
 
+  test('the API takes too long - same as no connection', async () => {
+    // Swap the timeout for one we can fire, and a fetch which waits for it
+    const controller = new AbortController()
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal)
+    fetchMock.mockImplementationOnce(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason))),
+    )
+    const call = api.sendSms(1).catch((e) => e)
+    controller.abort(new DOMException('timed out', 'TimeoutError'))
+    const e = await call
+    expect(e.code).toBe('network')
+    expect(e.message).toBe('Could not reach ShipThis. Check your connection and try again.')
+    expect(timeout).toHaveBeenCalledWith(api.TIMEOUT_MS)
+    expect(api.TIMEOUT_MS).toBe(30_000)
+    timeout.mockRestore()
+  })
+
+  test('the body takes too long - same as no connection', async () => {
+    fetchMock.mockResolvedValueOnce({ok: true, status: 200, text: () => Promise.reject(new DOMException('', 'TimeoutError'))})
+    const e = await api.sendSms(1).catch((e) => e)
+    expect(e.code).toBe('network')
+  })
+
+  test('an OK answer which is not JSON', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('<html>', {status: 200}))
+    const e = await api.signinComplete({m1: 'x', m2: 'y'}).catch((e) => e)
+    expect(e.code).toBe('invalid')
+  })
+
   test('no connection', async () => {
     const e = await failWith(new TypeError('Failed to fetch'))
     expect(e.code).toBe('network')
