@@ -7,9 +7,8 @@
 	persist_config off
 }
 
-:8080 {
-	root * /srv
-
+# On every response, errors too
+(security_headers) {
 	header {
 		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src {$API_ORIGIN}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 		Strict-Transport-Security "max-age=31536000"
@@ -18,6 +17,11 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		-Server
 	}
+}
+
+:8080 {
+	root * /srv
+	import security_headers
 
 	# Built files have a hash in the name, so they can be cached forever.
 	# Everything else (index.html) is never cached, so a new build shows at once.
@@ -28,4 +32,12 @@
 
 	encode zstd gzip
 	file_server
+
+	# Caddy drops the headers above when a request becomes an error (a 404),
+	# so set them again here
+	handle_errors {
+		import security_headers
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
 }

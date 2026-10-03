@@ -43,6 +43,19 @@ check "cache-control: no-store"
 echo "$headers" | grep -qi '^server:' && fail "Server header is sent"
 pass "no Server header"
 
+# Errors get the same headers - Caddy drops them unless handle_errors sets them again
+headers=$(curl -si "http://localhost:$PORT/does-not-exist" | tr -d '\r')
+echo "$headers" | grep -q '^HTTP/1.1 404' || fail "unknown path is not a 404"
+check "content-security-policy: default-src 'none'"
+check "strict-transport-security: max-age=31536000"
+check "x-content-type-options: nosniff"
+echo "$headers" | grep -qi '^server:' && fail "Server header is sent on a 404"
+pass "404 has the security headers"
+
+# The favicon is served
+curl -sf -o /dev/null "http://localhost:$PORT/favicon.ico" || fail "no favicon"
+pass "favicon"
+
 # Read whole responses first - grep -q closing the pipe early trips pipefail
 page=$(curl -sf "http://localhost:$PORT/")
 asset=$(echo "$page" | grep -oE '/assets/[^"]+\.js' | head -1)
