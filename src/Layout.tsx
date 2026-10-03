@@ -44,12 +44,13 @@ export function Notice() {
   return (
     <div className="notice">
       <p>
-        Your Apple password stays in this page. The page sends only SRP proof values to ShipThis, and ShipThis
+        Your Apple password stays in this page. The page sends only{' '}
+        <a href={sourceUrl('docs/how-it-works.md')}>SRP proof values</a> to the ShipThis API, and the ShipThis API
         sends them to Apple.
       </p>
       <p>
-        ShipThis uses your Apple session to set up your app. It deletes the session when the setup ends, or
-        after 30 minutes if you do not use it.
+        The ShipThis API uses your Apple session to set up your app. It deletes the session when the setup ends,
+        or after 30 minutes if you do not use it.
       </p>
       <p>
         <a href={sourceUrl('src/srp.ts')}>Read the code that handles your password</a>

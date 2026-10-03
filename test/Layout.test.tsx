@@ -13,6 +13,13 @@ test('the notice links to the code that handles the password', () => {
   expect(link.getAttribute('href')).toMatch(/^https:\/\/github\.com\/shipth-is\/connect\/blob\/.+\/src\/srp\.ts$/)
 })
 
+test('"SRP proof values" links to the explainer', () => {
+  render(<Notice />)
+  expect(screen.getByRole('link', {name: 'SRP proof values'}).getAttribute('href')).toMatch(
+    /^https:\/\/github\.com\/shipth-is\/connect\/blob\/.+\/docs\/how-it-works\.md$/,
+  )
+})
+
 test('a build with no commit says so', () => {
   render(<Layout>hello</Layout>)
   expect(screen.getByText('dev build')).toBeTruthy()

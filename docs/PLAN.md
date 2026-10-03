@@ -186,8 +186,8 @@ Go to `<app origin><return>` with `location.replace`.
 
 Notice above the sign-in form:
 
-> Your Apple password stays in this page. The page sends only SRP proof values to ShipThis, and ShipThis sends them to Apple.
-> ShipThis uses your Apple session to set up your app. It deletes the session when the setup ends, or after 30 minutes if you do not use it.
+> Your Apple password stays in this page. The page sends only [SRP proof values](docs/how-it-works.md) to the ShipThis API, and the ShipThis API sends them to Apple.
+> The ShipThis API uses your Apple session to set up your app. It deletes the session when the setup ends, or after 30 minutes if you do not use it.
 > [Read the code that handles your password](https://github.com/shipth-is/connect/blob/<commit>/src/srp.ts).
 
 Footer: "Build <first 7 characters of the commit>", linked to `https://github.com/shipth-is/connect/tree/<commit>`,
@@ -273,6 +273,7 @@ Caddyfile
 scripts/make-vector.mjs
 scripts/verify.sh
 .github/workflows/build.yml
+docs/how-it-works.md  SRP in plain words, what ShipThis gets, the limits, links to read more
 README.md         what the page does, where the password goes, how to check the page
 SECURITY.md       how to report a problem: support@shipth.is
 LICENSE
