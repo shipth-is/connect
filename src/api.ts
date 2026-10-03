@@ -66,12 +66,24 @@ export class ApiError extends Error {
   }
 }
 
+// Apple can be slow, and the API waits for Apple, so this is generous
+export const TIMEOUT_MS = 30_000
+
 let apiUrl = ''
 // The short-lived access token from the handoff. In memory only - never in storage.
 let accessToken: string | null = null
 
 export function setApiUrl(url: string) {
   apiUrl = url
+}
+
+function parseJson(text: string): any {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
 }
 
 async function call<T>(method: 'POST' | 'DELETE', path: string, body?: object, auth = true): Promise<T> {
@@ -82,7 +94,10 @@ async function call<T>(method: 'POST' | 'DELETE', path: string, body?: object, a
     headers.Authorization = `bearer ${accessToken}`
   }
 
+  // The whole call - headers and body - must finish in time, or it counts as
+  // not reaching the API. Never retried for you.
   let res: Response
+  let text: string
   try {
     res = await fetch(`${apiUrl}${path}`, {
       method,
@@ -91,17 +106,20 @@ async function call<T>(method: 'POST' | 'DELETE', path: string, body?: object, a
       credentials: 'omit',
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     })
+    text = await res.text()
   } catch {
     throw new ApiError('network')
   }
 
+  const data = parseJson(text)
   if (res.ok) {
-    if (res.status === 204) return undefined as T
-    return (await res.json()) as T
+    // Every OK answer has a JSON body, except a 204
+    if (res.status !== 204 && data === undefined) throw new ApiError('invalid', res.status)
+    return data as T
   }
 
-  const data = await res.json().catch(() => null)
   if (data && typeof data.error === 'string') throw new ApiError(data.error, res.status)
   // A 401 with no {error} is the access token - the link has expired
   if (res.status === 401) throw new ApiError('link_expired', 401)
