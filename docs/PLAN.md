@@ -251,17 +251,28 @@ Cache: `index.html` gets `Cache-Control: no-store`. Files in `assets/` get `Cach
 
 ### 6.3 GitHub Actions
 
-Workflow `.github/workflows/build.yml`. It runs on a pull request (test only) and on a push to `main` (test, build, push).
+Workflow `.github/workflows/build.yml`, with three jobs:
 
-1. `npm ci`, type check, `vitest run`.
-2. Build and push the image with `docker/build-push-action`, with `COMMIT=${{ github.sha }}`. Use the tags in section 3.4.
-3. Run `actions/attest-build-provenance` with the image digest and `push-to-registry: true`.
-4. Write the digest to the job summary.
+| Job | Runs on | Does |
+|---|---|---|
+| `test` | each PR and each push to `main` | `npm ci`, type check, `vitest run`, `vite build` |
+| `image` | each PR and each push to `main` | builds the image and runs `scripts/test-image.sh` on it |
+| `publish` | a push to `main` only, after `test` and `image` pass | builds and pushes the image, then attests it |
 
-Permissions: `contents: read`, `packages: write`, `id-token: write`, `attestations: write`.
+The `publish` job:
+
+1. Builds and pushes one `linux/amd64` image with `docker/build-push-action`, with `COMMIT=${{ github.sha }}`.
+   Use the tags in section 3.4. Add the labels `org.opencontainers.image.source` and `org.opencontainers.image.revision`.
+   Set `provenance: false` and `sbom: false`, so the digest is one plain image. The next step makes the provenance.
+2. Runs `actions/attest-build-provenance` with the image digest and `push-to-registry: true`.
+3. Pulls the image by digest and runs `scripts/test-image.sh` on it again.
+4. Writes the digest and the `gh attestation verify` command to the job summary.
+
+Only the `publish` job has these permissions: `packages: write`, `id-token: write`, `attestations: write`.
+All the other jobs have `contents: read` only. A PR, also from a fork, never pushes anything.
 Pin all actions by commit SHA.
 
-One manual step: make the GHCR package public.
+One manual step after the first push: make the GHCR package public.
 
 ### 6.4 README: "How to check this page"
 
