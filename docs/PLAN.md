@@ -186,14 +186,14 @@ Go to `<app origin><return>` with `location.replace`.
 
 Notice above the sign-in form:
 
-> Your Apple password stays in this page. The page sends only SRP proof values to ShipThis, and ShipThis sends them to Apple.
-> ShipThis uses your Apple session to set up your app. It deletes the session when the setup ends, or after 30 minutes if you do not use it.
+> Your Apple password stays in this page. The page sends only [SRP proof values](docs/how-it-works.md) to the ShipThis API, and the ShipThis API sends them to Apple.
+> The ShipThis API uses your Apple session to set up your app. It deletes the session when the setup ends, or after 30 minutes if you do not use it.
 > [Read the code that handles your password](https://github.com/shipth-is/connect/blob/<commit>/src/srp.ts).
 
 Footer: "Build <first 7 characters of the commit>", linked to `https://github.com/shipth-is/connect/tree/<commit>`,
 and a "How to check this page" link to the README section in section 6.
 
-The commit comes from the build argument `COMMIT`. Vite puts it in the code with `define`. A build with no `COMMIT` shows "dev build".
+The commit comes from the build argument `COMMIT`. The Dockerfile gives it to Vite as `VITE_COMMIT`. A build with no commit shows "dev build".
 
 Style: one CSS file. System font stack. The ShipThis logo as two SVG files in the repo, one for light mode and one for dark mode.
 Support dark mode with `prefers-color-scheme`. Use no web fonts and no Apple logo.
@@ -202,7 +202,7 @@ Support dark mode with `prefers-color-scheme`. Use no web fonts and no Apple log
 
 ### 6.1 Dockerfile
 
-1. Stage 1: `node:24-alpine`, pinned by digest. `npm ci`, then `vite build` with `COMMIT` from a build argument.
+1. Stage 1: `node:24-alpine`, pinned by digest. `npm ci`, then `vite build` with `VITE_COMMIT` set from the `COMMIT` build argument.
 2. Stage 2: `caddy:2-alpine`, pinned by digest. Copy `dist/` and `Caddyfile`. Expose `8080`.
 
 ### 6.2 Caddyfile
@@ -251,6 +251,7 @@ Write `scripts/verify.sh` (bash, needs `docker` and `curl`).
 src/
   main.tsx         reads the config and the link, then shows App
   App.tsx          the steps: sign in, two-factor, cancel, errors
+  Layout.tsx       the logo, the notice and the footer
   link.ts          reads the page URL and removes the fragment
   srp.ts           Apple SRP. The only file that reads the password. ShipThis has this code in its private app now. Move it here.
   api.ts           the calls in section 3.2, and the error-code messages
@@ -265,12 +266,14 @@ test/
   api.test.ts
   link.test.ts
   App.test.tsx
+  Layout.test.tsx
 index.html
 Dockerfile
 Caddyfile
 scripts/make-vector.mjs
 scripts/verify.sh
 .github/workflows/build.yml
+docs/how-it-works.md  SRP in plain words, what ShipThis gets, the limits, links to read more
 README.md         what the page does, where the password goes, how to check the page
 SECURITY.md       how to report a problem: support@shipth.is
 LICENSE

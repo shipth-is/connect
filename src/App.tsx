@@ -4,6 +4,7 @@
 import {type FormEvent, useEffect, useRef, useState} from 'react'
 
 import * as api from './api'
+import {Notice} from './Layout'
 import * as srp from './srp'
 
 type Step =
@@ -150,7 +151,7 @@ function SignIn({initialError, onSignedIn, onCancel, handleError}: SignInProps) 
   return (
     <form onSubmit={submit} aria-busy={busy}>
       <h1>Sign in to Apple</h1>
-      <div id="notice" />
+      <Notice />
       <ErrorText error={error} />
       <label htmlFor="apple-id">Apple ID</label>
       <input
