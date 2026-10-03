@@ -1,4 +1,4 @@
-import {defineConfig} from 'vite'
+import {defineConfig} from 'vitest/config'
 
 export default defineConfig({
   build: {
@@ -6,4 +6,8 @@ export default defineConfig({
     modulePreload: {polyfill: false},
     assetsInlineLimit: 0,
   },
+  // Test the browser build of @foxt/js-srp - the one the page uses.
+  // scripts/make-vector.mjs uses the Node build.
+  ssr: {resolve: {conditions: ['browser'], externalConditions: ['browser']}},
+  test: {setupFiles: ['test/setup.ts']},
 })
