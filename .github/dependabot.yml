@@ -1,0 +1,35 @@
+# Keeps the pinned versions up to date - see #21.
+# Everything here is pinned (image digests, action SHAs, exact npm versions),
+# so nothing updates unless Dependabot opens a PR for it.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week after a release before suggesting it, so a bad or
+    # compromised release has time to be noticed and pulled
+    cooldown:
+      default-days: 7
+    groups:
+      # One PR for everything that only runs at build or test time
+      dev-dependencies:
+        dependency-type: development
+      # React and react-dom move together
+      react:
+        patterns: ['react', 'react-dom']
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  # cooldown is not supported for actions. They are pinned by SHA, and we
+  # look at each PR before merging.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
