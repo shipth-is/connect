@@ -218,7 +218,9 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
 ```
 
 Cache: `index.html` gets `Cache-Control: no-store`. Files in `assets/` get `Cache-Control: public, max-age=31536000, immutable`.
-Caddy must refuse to start if `API_ORIGIN` is empty.
+`docker-entrypoint.sh` refuses to start Caddy unless `API_ORIGIN` is a plain `https://` origin. Caddy runs as `nobody`, with the admin API off.
+
+`scripts/test-image.sh <image>` runs the image and checks the headers, the cache rules and the `API_ORIGIN` check. CI runs it on each PR.
 
 ### 6.3 GitHub Actions
 
@@ -271,6 +273,7 @@ index.html
 Dockerfile
 Caddyfile
 scripts/make-vector.mjs
+scripts/test-image.sh
 scripts/verify.sh
 .github/workflows/build.yml
 docs/how-it-works.md  SRP in plain words, what ShipThis gets, the limits, links to read more
