@@ -91,6 +91,7 @@ Errors:
 - A relay error is `{error: <code>}` with an HTTP status.
 - A body that fails validation gives `400` with an array of zod issues. Show "Something went wrong. Try again."
 - A `401` with no `{error}` body means that the scoped JWT expired. Show the "link expired" error (section 4.5).
+- If the request does not get to the API, show "Could not reach ShipThis. Check your connection and try again."
 
 | Code | Message |
 |---|---|
@@ -119,7 +120,7 @@ https://connect.shipth.is/#token=<handoff token>&return=<path>
 
 - `token` is single-use. Read it, then remove the fragment at once with `history.replaceState`.
 - `return` is a path on the app origin, for example `/games/<id>/setup/ios`.
-  Accept it only if it starts with `/`, does not start with `//`, and has no `\`. If it fails, use `/dashboard`.
+  Accept it only if it starts with `/`, does not start with `//`, and has no `\` and no control characters. If it fails, use `/dashboard`.
 - The page always returns the user to `<app origin><return>`. The main app reads the result from the API. The page adds no parameters.
 
 ### 3.4 Container
