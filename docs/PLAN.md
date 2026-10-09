@@ -55,7 +55,7 @@ All API calls, except the handoff, send `Authorization: bearer <access token>` a
 
 ### 3.2 API endpoints
 
-The relay endpoints exist on develop now. The two handoff endpoints are new. The backend builds them to this contract.
+The relay endpoints exist on develop now. The handoff endpoints and `GET /me/apple/session` are new. The backend builds them to this contract.
 
 #### Handoff and tokens
 
@@ -69,24 +69,29 @@ Neither token is a JWT.
 | Stored | A hash in Redis, with the user ID | A hash in Redis, with the user ID |
 | Lifetime | Single use. Expires after 2 minutes. | Expires after 15 minutes |
 | Where | The page URL fragment | `Authorization` header from the page |
-| Accepted by | `POST /auth/apple-handoff` only | `/me/apple/*` only |
+| Accepted by | `POST /auth/apple-handoff` only | the 5 relay endpoints that the page calls (below) |
 
-- The general `security` middleware does not accept an access token. It tries to read it as a JWT and returns `401`.
-  Only a separate middleware on `/me/apple/*` accepts it. So a route that forgets to check gives `401`, not access.
-- "Sign out everywhere" (`revokeUserJWTs`) also deletes the user's handoff and access tokens.
-- The Apple session is stored with the user ID. The main app reads it later with its normal ShipThis login.
+- The API's `security` middleware accepts an access token only for an allowlist of method and path pairs:
+  `signin/init`, `signin/complete`, `2fa/phone`, `2fa/verify` and `DELETE session` under `/me/apple`. It returns `401` for any other route.
+  So a new route never accepts the access token by accident.
+- The four sign-in endpoints (`signin/init`, `signin/complete`, `2fa/phone`, `2fa/verify`) accept only the access token.
+  They return `401` for the normal ShipThis login. So this page is the only page that can sign in to Apple through the API.
+- The API keeps the time when it made each token (`iat`). It compares this time with the user's "sign out everywhere" time
+  (`revokeUserJWTs`), as it does for a JWT. So "sign out everywhere" also stops the user's handoff and access tokens.
+- The Apple session is stored with the user ID. The main app reads it later with its normal ShipThis login (`GET /me/apple/session`).
 
-`POST /me/apple/handoff` is for the main app. The page does not call it:
+These endpoints are for the main app. The page does not call them, and they do not accept an access token:
 
 | Endpoint | Body | Response |
 |---|---|---|
 | `POST /me/apple/handoff` (normal ShipThis login) | none | `200 {token}` |
+| `GET /me/apple/session` (normal ShipThis login) | none | `200 {teams, current}`. `404 {error: 'no_session'}` if there is no Apple session. |
 
 #### Endpoints that the page calls
 
 | Endpoint | Body | Response |
 |---|---|---|
-| `POST /auth/apple-handoff` (no `Authorization`) | `{token}` | `200 {accessToken, expiresAt}`. `401` if the token is wrong, used or expired. |
+| `POST /auth/apple-handoff` (no `Authorization`) | `{token}` | `200 {accessToken, expiresAt}`. `401 {error: 'invalid_token'}` if the token is wrong, used, expired or revoked. |
 | `POST /me/apple/signin/init` | `{accountName, a, protocols: ['s2k','s2k_fo']}` | `200 {salt, iterations, b, protocol}` |
 | `POST /me/apple/signin/complete` | `{m1, m2}` | `200` session response or two-factor response |
 | `POST /me/apple/2fa/phone` | `{phoneId}` | `204`. Apple sends an SMS. |
@@ -332,7 +337,7 @@ LICENSE
 
 ## 9. Not in this repo
 
-- The two handoff endpoints, the tokens and the `/me/apple/*` middleware (backend).
+- The handoff endpoints, `GET /me/apple/session`, the tokens and the access token allowlist in `security` (backend).
 - The "Connect Apple account" button and the return handling (frontend).
 - The App Platform config and the DNS record.
 - Team selection and the setup job. The main app does these after the return.
